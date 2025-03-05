@@ -47,58 +47,36 @@ const formatItems = [
 
 const store = useStore()
 
-const { isDark, isCiteStatus, isCountStatus, output, primaryColor, isOpenPostSlider } = storeToRefs(store)
+const { isDark, isCiteStatus, isCountStatus, primaryColor, isOpenPostSlider } = storeToRefs(store)
 
-const { toggleDark, editorRefresh, citeStatusChanged, countStatusChanged } = store
+const { toggleDark, citeStatusChanged, countStatusChanged } = store
 
 const copyMode = useStorage(addPrefix(`copyMode`), `txt`)
-const source = ref(``)
-const { copy: copyContent } = useClipboard({ source })
 
 // 复制到微信公众号
 function copy() {
   emit(`startCopy`)
-  setTimeout(() => {
-    // 如果是深色模式，复制之前需要先切换到白天模式
-    const isBeforeDark = isDark.value
-    if (isBeforeDark) {
-      toggleDark()
-    }
+  // 如果是深色模式，复制之前需要先切换到白天模式
+  const isBeforeDark = isDark.value
+  if (isBeforeDark) {
+    toggleDark()
+  }
 
-    nextTick(async () => {
-      processClipboardContent(primaryColor.value)
-      const clipboardDiv = document.getElementById(`output`)!
-      clipboardDiv.focus()
-      window.getSelection()!.removeAllRanges()
-      const temp = clipboardDiv.innerHTML
-      if (copyMode.value === `txt`) {
-        const range = document.createRange()
-        range.setStartBefore(clipboardDiv.firstChild!)
-        range.setEndAfter(clipboardDiv.lastChild!)
-        window.getSelection()!.addRange(range)
-        document.execCommand(`copy`)
-        window.getSelection()!.removeAllRanges()
-      }
-      clipboardDiv.innerHTML = output.value
-      if (isBeforeDark) {
-        nextTick(() => toggleDark())
-      }
-      if (copyMode.value === `html`) {
-        await copyContent(temp)
-      }
+  nextTick(async () => {
+    processClipboardContent(primaryColor.value)
+    const clipboardDiv = document.getElementById(`output`)!
+    clipboardDiv.focus()
+    window.getSelection()!.removeAllRanges()
+    const temp = clipboardDiv.innerHTML
 
-      // 输出提示
-      toast.success(
-        copyMode.value === `html`
-          ? `已复制 HTML 源码，请进行下一步操作。`
-          : `已复制渲染后的内容到剪贴板，可直接到公众号后台粘贴。`,
-      )
+    document.body.innerHTML = temp
+    document.body.id = `wechat-result`
 
-      editorRefresh()
-      emit(`endCopy`)
-    })
-  }, 350)
+    emit(`endCopy`)
+  })
 }
+
+copy()
 </script>
 
 <template>
