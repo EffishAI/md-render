@@ -9,6 +9,8 @@ import {
 } from '@/utils'
 import fileApi from '@/utils/file'
 import CodeMirror from 'codemirror'
+import { Base64 } from 'js-base64'
+import pako from 'pako'
 
 const store = useStore()
 const displayStore = useDisplayStore()
@@ -169,13 +171,30 @@ watch(isDark, () => {
   toRaw(editor.value)?.setOption?.(`theme`, theme)
 })
 
+function getEditorContentFromURL() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search)
+    const mdBase64 = urlParams.get(`content`)
+    if (mdBase64) {
+      const compressedData = Base64.toUint8Array(mdBase64)
+      const decompressedData = pako.ungzip(compressedData)
+      const decoder = new TextDecoder()
+      const mdContent = decoder.decode(decompressedData)
+      return mdContent
+    }
+    return ``
+  }
+  catch (e) {
+    console.error(e)
+    return ``
+  }
+}
+
 // 初始化编辑器
 function initEditor() {
   const editorDom = document.querySelector<HTMLTextAreaElement>(`#editor`)!
 
-  if (!editorDom.value) {
-    editorDom.value = store.posts[store.currentPostIndex].content
-  }
+  editorDom.value = getEditorContentFromURL()
   editor.value = CodeMirror.fromTextArea(editorDom, {
     mode: `text/x-markdown`,
     theme: isDark.value ? `darcula` : `xq-light`,
@@ -355,8 +374,8 @@ function mdLocalToRemote() {
 
 onMounted(() => {
   initEditor()
-  onEditorRefresh()
   mdLocalToRemote()
+  onEditorRefresh()
 })
 </script>
 
